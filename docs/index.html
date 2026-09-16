@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e14">
+<title>ALSPD-DESK — 自建 Windows 远程桌面</title>
+<meta name="description" content="自建 Windows 远程桌面：在家里操作公司电脑，流量只走你自己的 VPS + 端到端加密，不经过任何第三方中转。">
+<meta property="og:title" content="ALSPD-DESK — 自建 Windows 远程桌面">
+<meta property="og:description" content="在家里操作公司电脑，流量只走你自己的服务器。端到端加密，中继也看不到内容。">
+<meta property="og:type" content="website">
+<style>
+/* ============================================================
+   ALSPD-DESK 宣传页
+   单文件、零外部依赖：不引 CDN 字体/库，所有资源内联。
+   原因：Google Fonts 等在国内会加载失败，页面会闪烁或字体回退难看。
+   ============================================================ */
+
+:root {
+  --bg:        #0a0e14;
+  --bg-soft:   #0f141c;
+  --panel:     #131a24;
+  --panel-2:   #182130;
+  --line:      #223044;
+  --text:      #dbe4f0;
+  --text-dim:  #8b9bb4;
+  --text-mute: #5d6b80;
+  --accent:    #38bdf8;
+  --accent-2:  #22d3ee;
+  --good:      #3ddc97;
+  --warn:      #fbbf24;
+  --bad:       #f87171;
+  --radius:    14px;
+  --maxw:      1080px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", "Source Han Sans SC",
+          Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas,
+          "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  line-height: 1.75;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 顶部氛围光 */
+body::before {
+  content: "";
+  position: fixed;
+  top: -40vh; left: 50%;
+  width: 120vw; height: 80vh;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center,
+              rgba(56,189,248,.14), rgba(34,211,238,.05) 45%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 20px; position: relative; z-index: 1; }
+
+/* ---------------- 导航 ---------------- */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: rgba(10,14,20,.72);
+  border-bottom: 1px solid transparent;
+  transition: border-color .3s, background .3s;
+}
+.nav.solid { border-bottom-color: var(--line); background: rgba(10,14,20,.9); }
+.nav-inner {
+  max-width: var(--maxw); margin: 0 auto; padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .3px; }
+.brand-mark {
+  width: 26px; height: 26px; border-radius: 7px; flex: 0 0 auto;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: grid; place-items: center;
+  font-size: 14px; color: #04121c; font-weight: 900;
+}
+.nav-links { display: flex; gap: 22px; align-items: center; }
+.nav-links a { color: var(--text-dim); text-decoration: none; font-size: 14px; transition: color .2s; }
+.nav-links a:hover { color: var(--text); }
+@media (max-width: 720px) { .nav-links .hide-sm { display: none; } }
+
+/* ---------------- 通用 ---------------- */
+section { padding: 72px 0; }
+@media (max-width: 720px) { section { padding: 52px 0; } }
+
+.eyebrow {
+  display: inline-block;
+  font-size: 12px; font-weight: 700; letter-spacing: 2px;
+  color: var(--accent-2); text-transform: uppercase;
+  margin-bottom: 12px;
+}
+h2.section-title {
+  font-size: clamp(24px, 4.4vw, 34px);
+  line-height: 1.3; font-weight: 800; letter-spacing: -.4px;
+  margin-bottom: 14px;
+}
+.section-sub { color: var(--text-dim); font-size: clamp(14px, 2.4vw, 16px); max-width: 660px; margin-bottom: 40px; }
+
+.grad {
+  background: linear-gradient(100deg, var(--accent), var(--accent-2) 55%, #818cf8);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* ---------------- Hero ---------------- */
+.hero { padding: 84px 0 60px; }
+@media (max-width: 720px) { .hero { padding: 56px 0 40px; } }
+
+.badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.badge {
+  font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--panel);
+  color: var(--text-dim); white-space: nowrap;
+}
+.badge.on { border-color: rgba(61,220,151,.35); background: rgba(61,220,151,.09); color: var(--good); }
+
+h1.hero-title {
+  font-size: clamp(30px, 7vw, 56px);
+  line-height: 1.16; font-weight: 900; letter-spacing: -1.2px;
+  margin-bottom: 22px;
+}
+.hero-lead {
+  font-size: clamp(15px, 2.7vw, 18px);
+  color: var(--text-dim); max-width: 680px; margin-bottom: 34px;
+}
+.hero-lead strong { color: var(--text); font-weight: 700; }
+
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 40px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 22px; border-radius: 10px;
+  font-size: 15px; font-weight: 700; text-decoration: none;
+  border: 1px solid var(--line); color: var(--text); background: var(--panel);
+  transition: transform .15s, border-color .2s, background .2s;
+}
+.btn:hover { transform: translateY(-2px); border-color: #3a4d68; }
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #04121c; border-color: transparent;
+}
+.btn.primary:hover { border-color: transparent; box-shadow: 0 8px 28px -10px rgba(56,189,248,.7); }
+
+/* 指标条 */
+.stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+  background: var(--line); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden;
+}
+@media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+.stat { background: var(--panel); padding: 20px 18px; }
+.stat .num {
+  font-size: clamp(20px, 3.6vw, 28px); font-weight: 800; letter-spacing: -.6px;
+  font-family: var(--mono); color: var(--accent); line-height: 1.2;
+}
+.stat .lbl { font-size: 12.5px; color: var(--text-mute); margin-top: 6px; }
+
+/* ---------------- 卡片网格 ---------------- */
+.grid { display: grid; gap: 16px; }
+.grid.g2 { grid-template-columns: repeat(2, 1fr); }
+.grid.g3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 860px) { .grid.g3 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .grid.g2, .grid.g3 { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 22px;
+  transition: border-color .25s, transform .25s, background .25s;
+}
+.card:hover { border-color: #31435c; transform: translateY(-3px); background: var(--panel-2); }
+.card .ico { font-size: 22px; line-height: 1; margin-bottom: 12px; display: block; }
+.card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.card p { font-size: 14px; color: var(--text-dim); }
+.card p strong { color: var(--text); }
+.card.warn { border-color: rgba(251,191,36,.3); background: rgba(251,191,36,.05); }
+.card.bad  { border-color: rgba(248,113,113,.3); background: rgba(248,113,113,.05); }
+.card.good { border-color: rgba(61,220,151,.3);  background: rgba(61,220,151,.05); }
+
+/* ---------------- 架构图 ---------------- */
+.arch {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; flex-wrap: nowrap; margin: 8px 0 28px;
+}
+@media (max-width: 780px) { .arch { flex-direction: column; } }
+.node {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 18px 16px; text-align: center;
+  flex: 0 0 auto; min-width: 150px;
+}
+.node .nh { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+.node .nd { font-size: 12px; color: var(--text-mute); line-height: 1.55; }
+.node.relay { border-color: rgba(56,189,248,.4); background: rgba(56,189,248,.06); }
+.link {
+  flex: 1 1 auto; min-width: 70px; text-align: center;
+  color: var(--text-mute); font-size: 11.5px; font-family: var(--mono);
+  position: relative; padding: 0 8px;
+}
+.link .arrow { color: var(--accent); font-size: 15px; display: block; }
+@media (max-width: 780px) { .link { padding: 10px 0; } .link .arrow { transform: rotate(90deg); } }
+
+/* ---------------- 表格 ---------------- */
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.tbl th, .tbl td { padding: 13px 16px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tbl th { background: var(--panel-2); font-weight: 700; font-size: 13px; color: var(--text); white-space: nowrap; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl td { color: var(--text-dim); }
+.tbl code { font-family: var(--mono); font-size: 12.5px; color: var(--accent-2); }
+.yes { color: var(--good); font-weight: 700; }
+.no  { color: var(--bad);  font-weight: 700; }
+.mid { color: var(--warn); font-weight: 700; }
+
+/* ---------------- 代码块 ---------------- */
+pre {
+  background: #070b11; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 18px; overflow-x: auto; margin: 0 0 14px;
+  font-family: var(--mono); font-size: 13px; line-height: 1.7; color: #b9c9dd;
+  -webkit-overflow-scrolling: touch;
+}
+pre .c { color: var(--text-mute); }
+pre .k { color: var(--accent); }
+pre .s { color: var(--good); }
+code.inline {
+  font-family: var(--mono); font-size: .9em; padding: 2px 6px; border-radius: 5px;
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--accent-2);
+}
+
+/* ---------------- 步骤 ---------------- */
+.steps { display: grid; gap: 20px; }
+.step { display: grid; grid-template-columns: 44px 1fr; gap: 16px; align-items: start; }
+.step-num {
+  width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+  background: var(--panel-2); border: 1px solid var(--line);
+  font-family: var(--mono); font-weight: 800; color: var(--accent); font-size: 17px;
+}
+.step h3 { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+@media (max-width: 560px) {
+  .step { grid-template-columns: 34px 1fr; gap: 12px; }
+  .step-num { width: 34px; height: 34px; font-size: 14px; border-radius: 9px; }
+}
+
+/* ---------------- 安全模型高亮块 ---------------- */
+.sec-box {
+  border: 1px solid rgba(56,189,248,.34);
+  background: linear-gradient(160deg, rgba(56,189,248,.07), rgba(129,140,248,.04));
+  border-radius: 18px; padding: 28px;
+}
+@media (max-width: 560px) { .sec-box { padding: 20px 16px; } }
+.formula {
+  font-family: var(--mono); font-size: 13.5px; line-height: 2;
+  background: #070b11; border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px 18px; overflow-x: auto; margin: 18px 0 8px; color: #b9c9dd;
+}
+.formula .hl { color: var(--accent); font-weight: 700; }
+.formula .cm { color: var(--text-mute); }
+
+/* 限制列表 */
+.limits { list-style: none; display: grid; gap: 11px; }
+.limits li {
+  display: grid; grid-template-columns: 20px 1fr; gap: 10px;
+  font-size: 14px; color: var(--text-dim); align-items: start;
+}
+.limits li::before { content: "—"; color: var(--text-mute); }
+
+/* ---------------- 页脚 ---------------- */
+footer {
+  border-top: 1px solid var(--line); margin-top: 40px;
+  padding: 40px 0 56px; font-size: 13.5px; color: var(--text-mute);
+}
+footer a { color: var(--text-dim); text-decoration: none; }
+footer a:hover { color: var(--accent); }
+.foot-grid { display: flex; flex-wrap: wrap; gap: 28px; justify-content: space-between; margin-bottom: 26px; }
+.foot-note {
+  border-left: 2px solid rgba(248,113,113,.5); padding-left: 14px;
+  color: var(--text-dim); font-size: 13px; line-height: 1.85;
+}
+.foot-note strong { color: var(--warn); }
+
+/* ---------------- 滚动出现动画 ---------------- */
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1); }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <div class="brand"><span class="brand-mark">A</span>ALSPD-DESK</div>
+    <div class="nav-links">
+      <a href="#why" class="hide-sm">为什么</a>
+      <a href="#security" class="hide-sm">安全模型</a>
+      <a href="#perf" class="hide-sm">实测</a>
+      <a href="#start">快速开始</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ==================== HERO ==================== -->
+<header class="hero">
+  <div class="wrap">
+    <div class="badge-row reveal">
+      <span class="badge on">端到端加密</span>
+      <span class="badge">自建中继</span>
+      <span class="badge">零入站端口</span>
+      <span class="badge">无需管理员权限</span>
+      <span class="badge">MIT</span>
+    </div>
+
+    <h1 class="hero-title reveal">
+      在家里操作公司电脑，<br>
+      <span class="grad">流量只走你自己的服务器</span>
+    </h1>
+
+    <p class="hero-lead reveal">
+      不经过向日葵 / TeamViewer / AnyDesk 等任何第三方中转。
+      桌面画面与键鼠操作全程 <strong>端到端加密</strong> ——
+      连你自己的中继服务器也看不到内容。
+    </p>
+
+    <div class="cta-row reveal">
+      <a class="btn primary" href="#start">快速开始 →</a>
+      <a class="btn" href="#why">看看它怎么做的</a>
+    </div>
+
+    <div class="stats reveal">
+      <div class="stat"><div class="num">1.16<span style="font-size:.55em"> Mbps</span></div><div class="lbl">办公场景码率（2560×1408 原生）</div></div>
+      <div class="stat"><div class="num">0<span style="font-size:.55em"> 帧</span></div><div class="lbl">画面静止时的发包量</div></div>
+      <div class="stat"><div class="num">20<span style="font-size:.55em"> fps</span></div><div class="lbl">真实公网链路实测帧率</div></div>
+      <div class="stat"><div class="num">121<span style="font-size:.55em"> ms</span></div><div class="lbl">基线往返延迟</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- ==================== 为什么 ==================== -->
+<section id="why">
+  <div class="wrap">
+    <span class="eyebrow reveal">Why</span>
+    <h2 class="section-title reveal">问题不在功能，在<span class="grad">信任</span></h2>
+    <p class="section-sub reveal">
+      远程办公需要连回公司电脑。但把桌面画面交给商业远控工具，意味着你的屏幕内容、键鼠操作
+      都要经过别人的服务器。桌面上一旦有敏感资料，这个风险不好接受。
+    </p>
+
+    <div class="grid g2">
+      <div class="card bad reveal">
+        <span class="ico">⚠️</span>
+        <h3>第三方远控工具</h3>
+        <p>
+          画面与输入经过厂商服务器，你只能「相信」它不记录、不外泄、不被入侵。<br>
+          中间任何一环出问题，你都无法察觉。
+        </p>
+      </div>
+      <div class="card good reveal">
+        <span class="ico">🔒</span>
+        <h3>ALSPD-DESK</h3>
+        <p>
+          中继是<strong>你自己的 VPS</strong>，而且<strong>拿不到解密密钥</strong>。
+          就算 VPS 被入侵、被扣押，攻击者得到的也只是密文。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 架构 ==================== -->
+<section id="arch" style="padding-top:0">
+  <div class="wrap">
+    <span class="eyebrow reveal">Architecture</span>
+    <h2 class="section-title reveal">两端主动外连，被控机不开任何端口</h2>
+    <p class="section-sub reveal">
+      被控端和家里那台都<strong>主动连出去</strong>到你的 VPS。所以不必改防火墙、
+      不必做端口映射、也不需要管理员权限。
+    </p>
+
+    <div class="arch reveal">
+      <div class="node">
+        <div class="nh">家中 Windows</div>
+        <div class="nd">Viewer 控制端<br>单文件 exe</div>
+      </div>
+      <div class="link">
+        <span class="arrow">◄──────►</span>
+        wss :443<br>TLS + 端到端加密
+      </div>
+      <div class="node relay">
+        <div class="nh">你的 VPS</div>
+        <div class="nd">Relay 中继<br>配对 + 转发密文<br><strong style="color:var(--accent)">看不到内容</strong></div>
+      </div>
+      <div class="link">
+        <span class="arrow">◄──────►</span>
+        wss :443<br>开机自启 + 自动重连
+      </div>
+      <div class="node">
+        <div class="nh">公司 Windows</div>
+        <div class="nd">Agent 受控端<br>用户态运行</div>
+      </div>
+    </div>
+
+    <div class="grid g3">
+      <div class="card reveal">
+        <span class="ico">🚪</span>
+        <h3>零入站端口</h3>
+        <p>被控机不监听任何端口，没有可被攻击的入口，也不用碰防火墙规则。</p>
+      </div>
+      <div class="card reveal">
+        <span class="ico">🧭</span>
+        <h3>同房间即配对</h3>
+        <p>两端配置同一个 <code class="inline">room</code>，中继看到两条连接就对接。没有设备 ID、没有信令协商。</p>
+      </div>
+      <div class="card reveal">
+        <span class="ico">🌐</span>
+        <h3>代理兜底</h3>
+        <p>直连优先；不通时自动走 HTTP CONNECT / SOCKS5（含 IE 注册表探测）。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 安全模型 ==================== -->
+<section id="security" style="background:var(--bg-soft)">
+  <div class="wrap">
+    <span class="eyebrow reveal">Security model</span>
+    <h2 class="section-title reveal">中继拿不到解密所需的东西</h2>
+    <p class="section-sub reveal">
+      这是整个项目最核心的一个设计决定：<strong>把「配对身份」和「加密密钥」拆成两个独立的秘密</strong>。
+    </p>
+
+    <div class="sec-box reveal">
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr><th>秘密</th><th>谁知道</th><th>用途</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>relay_token</code></td>
+              <td>Agent / Viewer / <strong style="color:var(--warn)">中继</strong></td>
+              <td>向中继证明身份 —— <strong>只能用于配对</strong>，不能解密</td>
+            </tr>
+            <tr>
+              <td><code>password</code></td>
+              <td>Agent / Viewer<br><strong style="color:var(--good)">从不发给中继</strong></td>
+              <td>派生端到端会话密钥，真正保护画面内容</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="formula">
+        PSK     = <span class="hl">Scrypt</span>(password, salt)              <span class="cm"># 密码不当密钥直接用</span><br>
+        session = <span class="hl">HKDF</span>(PSK, agent_nonce ‖ viewer_nonce)   <span class="cm"># nonce 明文交换无妨</span>
+      </div>
+
+      <p style="font-size:14px;color:var(--text-dim);margin-top:14px">
+        两个 nonce 由双方随机生成、经中继明文交换（nonce 本身无需保密）。
+        但中继没有 <code class="inline">PSK</code>，<strong style="color:var(--text)">无法派生出会话密钥</strong>。
+      </p>
+    </div>
+
+    <div class="grid g3" style="margin-top:20px">
+      <div class="card reveal">
+        <span class="ico">🛡️</span>
+        <h3>抗重放</h3>
+        <p>每帧带序列号 + GCM nonce 计数器，重放旧密文会被直接拒绝。</p>
+      </div>
+      <div class="card reveal">
+        <span class="ico">🎭</span>
+        <h3>TLS 只是伪装层</h3>
+        <p>就算公司做了 TLS 中间人解密，解出来的仍是我们的密文，机密性不受影响。</p>
+      </div>
+      <div class="card reveal">
+        <span class="ico">🔑</span>
+        <h3>AES-256-GCM</h3>
+        <p>会话密钥一次性、由双方 nonce 派生；换一次会话就换一次密钥。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 保命措施 ==================== -->
+<section id="safety">
+  <div class="wrap">
+    <span class="eyebrow reveal">Safety</span>
+    <h2 class="section-title reveal">⚠️ 它会夺取键鼠，所以要有刹车</h2>
+    <p class="section-sub reveal">
+      被控端的职能就是操作键鼠 —— 代码有 bug 时可能<strong>夺走你自己的键鼠</strong>。
+      所以内置了四层保护，默认全部开启。
+    </p>
+
+    <div class="grid g2">
+      <div class="card good reveal">
+        <span class="ico">🛑</span>
+        <h3>1 · 急停热键 <code class="inline">Ctrl+Alt+Shift+Q</code></h3>
+        <p>按下即暂停注入 + 松开所有按键 + <strong>彻底停止 Agent</strong>（连重连也停掉，需手动重启）。</p>
+      </div>
+      <div class="card good reveal">
+        <span class="ico">👁️</span>
+        <h3>2 · 只读模式</h3>
+        <p><code class="inline">allow_input = false</code> 时<strong>根本不创建注入器</strong> —— 只上传画面。</p>
+      </div>
+      <div class="card good reveal">
+        <span class="ico">⏱️</span>
+        <h3>3 · 空闲自动断连</h3>
+        <p>远程无操作超时后自动断开，并松开所有按键。</p>
+      </div>
+      <div class="card good reveal">
+        <span class="ico">🖱️</span>
+        <h3>4 · 本机活动检测</h3>
+        <p>发现本机有人在动鼠标 → 立即暂停注入，<strong>把控制权让给本机的人</strong>。</p>
+      </div>
+    </div>
+
+    <div class="card reveal" style="margin-top:16px">
+      <span class="ico">🧪</span>
+      <h3>外加一个演练模式</h3>
+      <p>
+        <code class="inline">input_dry_run = true</code> 时只记录「本来会注入什么」，
+        <strong>不真的操作键鼠</strong> —— 可以安全地验证整条注入链路，不用担心失控。
+        项目所有自动化测试也跑在这个模式下。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 实测 ==================== -->
+<section id="perf" style="background:var(--bg-soft)">
+  <div class="wrap">
+    <span class="eyebrow reveal">Measured</span>
+    <h2 class="section-title reveal">不是估算，是<span class="grad">实测</span></h2>
+    <p class="section-sub reveal">
+      被控端 2560×1440 主屏 + 境外 VPS + 真实公网链路。下面每个数字都来自实际测量，
+      测试脚本都在仓库里，你可以自己复现。
+    </p>
+
+    <div class="stats reveal" style="margin-bottom:22px">
+      <div class="stat">
+        <div class="num">4.65<span style="font-size:.55em"> ms</span></div>
+        <div class="lbl">dxcam(DXGI) 抓取一个新帧</div>
+      </div>
+      <div class="stat">
+        <div class="num">0.11<span style="font-size:.55em"> ms</span></div>
+        <div class="lbl">画面静止时的一次轮询</div>
+      </div>
+      <div class="stat">
+        <div class="num">~1 ms</div>
+        <div class="lbl">客户端解码耗时（每帧）</div>
+      </div>
+      <div class="stat">
+        <div class="num">0<span style="font-size:.55em"> 泄漏</span></div>
+        <div class="lbl">反复重连 5 轮的线程/句柄残留</div>
+      </div>
+    </div>
+
+    <div class="tbl-wrap reveal">
+      <table class="tbl">
+        <thead><tr><th>场景</th><th>结果</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>办公场景码率</td>
+            <td><strong style="color:var(--accent)">1.16 Mbps</strong></td>
+            <td>2560×1408 原生分辨率，20 fps</td>
+          </tr>
+          <tr>
+            <td>画面静止时</td>
+            <td><strong style="color:var(--good)">0 帧发包</strong></td>
+            <td>分块差分后没有变化块，一个字节都不发</td>
+          </tr>
+          <tr>
+            <td>60 秒传输量</td>
+            <td>8.29 MB / 1097 帧</td>
+            <td>其中约一半是周期性的整屏关键帧</td>
+          </tr>
+          <tr>
+            <td>基线往返延迟</td>
+            <td>121 ms</td>
+            <td>链路另有偶发 0.5~2 秒的丢包尖峰</td>
+          </tr>
+          <tr>
+            <td>采集后端回退</td>
+            <td>mss (GDI) 恒定 33 ms</td>
+            <td>DXGI 被占用时自动回落，不影响可用性</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 快速开始 ==================== -->
+<section id="start">
+  <div class="wrap">
+    <span class="eyebrow reveal">Quick start</span>
+    <h2 class="section-title reveal">三步跑起来</h2>
+    <p class="section-sub reveal">
+      需要一台有公网 IP 的 VPS（Debian / Ubuntu）和两台 Windows。
+    </p>
+
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-num">1</div>
+        <div>
+          <h3>在 VPS 上部署中继</h3>
+<pre><span class="c"># 上传代码（从你的开发机）</span>
+scp -r src config.relay.example.toml root@<span class="s">&lt;你的VPS_IP&gt;</span>:/opt/alspd/
+
+<span class="c"># 在 VPS 上：中继只依赖 websockets 一个库</span>
+cd /opt/alspd
+mv config.relay.example.toml config.relay.toml   <span class="c"># 填好 room / relay_token</span>
+pip3 install --break-system-packages websockets
+python3 src/relay/server.py --config config.relay.toml</pre>
+        </div>
+      </div>
+
+      <div class="step reveal">
+        <div class="step-num">2</div>
+        <div>
+          <h3>在被控端（公司电脑）运行 Agent</h3>
+<pre><span class="c"># 先自检：不联网、不注入键鼠</span>
+.\ALSPD-Agent.exe --selftest
+
+<span class="c"># 启动</span>
+.\ALSPD-Agent.exe --config config.toml</pre>
+        </div>
+      </div>
+
+      <div class="step reveal">
+        <div class="step-num">3</div>
+        <div>
+          <h3>在控制端（家里电脑）运行 Viewer</h3>
+<pre><span class="c"># 只看画面（推荐先用这个确认链路）</span>
+<span class="k">ALSPD-Viewer.exe</span>
+
+<span class="c"># 确认稳定后，想操作键鼠再加</span>
+<span class="k">ALSPD-Viewer.exe</span> --enable-input</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="card warn reveal" style="margin-top:24px">
+      <span class="ico">📋</span>
+      <h3>动手前建议先做一次网络侦察</h3>
+      <p>
+        <code class="inline">tools/probe_agent.py</code> 会告诉你：<strong>能不能跑未签名程序、
+        哪些端口通、TLS 有没有被中间人、哪个代理可用、真实带宽多少</strong>。
+        在锁定的办公网络里，这一步能避免白忙一场。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 已知限制 ==================== -->
+<section id="limits" style="background:var(--bg-soft)">
+  <div class="wrap">
+    <span class="eyebrow reveal">Limitations</span>
+    <h2 class="section-title reveal">如实说清楚它<span class="grad">做不到什么</span></h2>
+    <p class="section-sub reveal">
+      这是个个人自用工具，不是产品。下面这些限制是真实存在的，不是客套话。
+    </p>
+
+    <ul class="limits reveal">
+      <li><span></span>全走中继，<strong>未实现 P2P 直连</strong> —— 延迟和带宽取决于你的 VPS，多一跳。</li>
+      <li><span></span><strong>用户态运行，不控制登录界面 / UAC 提权窗口</strong> —— 这是刻意的取舍：这样就不需要管理员权限。代价是锁屏后无法远程解锁。</li>
+      <li><span></span><strong>多块显示器分辨率完全相同时无法区分</strong> —— 此时会明确警告并拒绝猜测（注入位置错了比不注入更糟）。</li>
+      <li><span></span>剪贴板只支持<strong>纯文本</strong>，不含图片 / 文件。</li>
+      <li><span></span><strong>未做文件传输。</strong></li>
+      <li><span></span>链路质量取决于你的网络 —— 实测遇到过突发丢包导致的 0.5~2 秒延迟尖峰。</li>
+      <li><span></span><strong>未经过安全审计。</strong>请自行评估风险。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ==================== 对比 ==================== -->
+<section id="compare">
+  <div class="wrap">
+    <span class="eyebrow reveal">Compare</span>
+    <h2 class="section-title reveal">和现成方案比</h2>
+    <p class="section-sub reveal">
+      说白了：如果你能接受「别人服务器上跑着你的画面」，用现成的更省事。
+      如果你不能接受，这个项目就是为那个场景做的。
+    </p>
+
+    <div class="tbl-wrap reveal">
+      <table class="tbl">
+        <thead>
+          <tr><th>维度</th><th>第三方远控</th><th>ALSPD-DESK</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>画面经过谁的服务器</td>
+            <td class="no">厂商的</td>
+            <td class="yes">你自己的</td>
+          </tr>
+          <tr>
+            <td>中继能否看到内容</td>
+            <td class="no">能</td>
+            <td class="yes">不能（端到端加密）</td>
+          </tr>
+          <tr>
+            <td>被控机需要开端口吗</td>
+            <td class="yes">不需要</td>
+            <td class="yes">不需要</td>
+          </tr>
+          <tr>
+            <td>需要管理员权限吗</td>
+            <td class="mid">通常要</td>
+            <td class="yes">不需要</td>
+          </tr>
+          <tr>
+            <td>功能丰富度</td>
+            <td class="yes">很全</td>
+            <td class="mid">够用（无文件传输 / 无 P2P）</td>
+          </tr>
+          <tr>
+            <td>开箱即用</td>
+            <td class="yes">装完就用</td>
+            <td class="mid">需要一台自己的 VPS</td>
+          </tr>
+          <tr>
+            <td>可信度来源</td>
+            <td class="no">相信厂商</td>
+            <td class="yes">可以自己读代码</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 页脚 ==================== -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="brand" style="margin-bottom:10px"><span class="brand-mark">A</span>ALSPD-DESK</div>
+        <div>自建 Windows 远程桌面 · <a href="https://opensource.org/licenses/MIT">MIT License</a></div>
+      </div>
+      <div>
+        <div style="margin-bottom:8px;color:var(--text);font-weight:700">文档</div>
+        <div><a href="deploy.md">部署指南</a> · <a href="plan.md">设计文档</a></div>
+        <div><a href="verify-phase0.md">网络侦察</a> · <a href="verify-phase2.md">手动验证</a></div>
+      </div>
+    </div>
+
+    <div class="foot-note">
+      <strong>⚠️ 使用须知</strong><br>
+      本项目仅供在<strong>你本人拥有、或已获得明确授权</strong>的设备上使用。<br>
+      在公司设备上部署前，请先确认是否符合公司的 IT 与安全政策 ——
+      未经授权安装远控工具可能违反规定，这是你的责任，不是本项目的。
+    </div>
+  </div>
+</footer>
+
+<script>
+// 滚动时给导航加分割线
+(function () {
+  var nav = document.getElementById('nav');
+  var onScroll = function () {
+    if (window.scrollY > 20) nav.classList.add('solid');
+    else nav.classList.remove('solid');
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+
+// 滚动出现动画。
+// 用 IntersectionObserver 而不是监听 scroll：性能好得多，手机上不卡。
+// 不支持时（老浏览器）直接全部显示，不让内容因为动画失败而看不见。
+(function () {
+  var items = document.querySelectorAll('.reveal');
+  if (!('IntersectionObserver' in window)) {
+    for (var i = 0; i < items.length; i++) items[i].classList.add('in');
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        io.unobserve(e.target);   // 出现一次就不再观察
+      }
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+  for (var j = 0; j < items.length; j++) io.observe(items[j]);
+})();
+</script>
+
+</body>
+</html>

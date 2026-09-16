@@ -1,0 +1,36 @@
+# ALSPD-DESK 中继服务器配置示例
+#
+# 用法：复制本文件为 config.relay.toml，填好 room / relay_token 后放到 VPS 上。
+# config.relay.toml 已被 .gitignore 排除，不会入库。
+#
+# ⚠️ 这份配置**故意不含 common.password** —— 端到端加密密码只给 Agent 与 Viewer。
+#    中继没有它，就无法解密任何画面内容，这正是「中继看不到明文」的设计前提。
+#    如果误把 password 填进来，中继启动时会给出警告。
+
+[common]
+# 本机的公网 IP 或域名（中继自己用不到，但保持一致便于排查）
+relay_host = "<你的VPS公网IP>"
+
+# 中继监听的端口。443 最优 —— 最易穿公司防火墙，且最不显眼。
+relay_ports = [443]
+
+# 房间号：三端（Agent / Viewer / Relay）必须完全一致
+room = "change-me-room"
+
+# 配对令牌：三端必须一致。建议 32 位以上随机串。
+# ⚠️ 它会被放在中继上，所以**不要**用你的加密密码充当它。
+relay_token = "change-me-relay-token-32-chars-min"
+
+[tls]
+enabled = true
+
+[relay]
+host = "0.0.0.0"
+port = 443
+# 证书不存在时会用 openssl 现场生成自签证书
+cert = "/home/alspd-desk/relay.crt"
+key = "/home/alspd-desk/relay.key"
+
+[logging]
+level = "INFO"
+file = "/home/alspd-desk/relay.log"

@@ -1,0 +1,33 @@
+# ---- Python ----
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ---- PyInstaller 输出 ----
+build/
+dist/
+*.spec
+
+# ---- 本机配置与密钥（绝不入库）----
+# 这些文件里含你的 VPS 地址、房间号、配对令牌、端到端加密密码 —— 一旦入库就泄露了
+config.toml
+config.relay.toml
+*.pem
+*.key
+*.crt
+*.pfx
+
+# ---- 运行产物 ----
+*.log
+logs/
+probe_result*.txt
+stats_*.txt
+*.jsonl
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

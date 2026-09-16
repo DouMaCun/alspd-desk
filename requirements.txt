@@ -1,0 +1,19 @@
+# ALSPD-DESK 运行依赖
+
+# ---- Phase 0：侦察 / 性能验证 ----
+mss>=10.0.0            # 屏幕采集（底层走 DXGI / GDI）
+numpy>=1.26            # 分块差分
+pillow>=10.0           # JPEG / PNG / zlib 编码
+cryptography>=42.0     # AES-GCM / Scrypt / HKDF / 自签证书
+
+# ---- Phase 1+：传输 / 注入 / 界面 ----
+websockets>=13.0       # wss 传输
+pywin32>=306; sys_platform == "win32"    # SendInput 键鼠注入 + 剪贴板
+PySide6>=6.6           # Viewer 控制端界面
+
+# ---- 代理兜底（公司网络常要求经代理出网）----
+# websockets 走 SOCKS 代理时需要它；纯 HTTP CONNECT 代理不需要。
+python-socks[asyncio]>=2.4
+
+# ---- 打包 ----
+pyinstaller>=6.0

@@ -1,0 +1,25 @@
+# ALSPD-DESK 编辑器配置
+#
+# 注意 *.ps1 必须带 UTF-8 BOM：
+# Windows PowerShell 5.1 读取无 BOM 的脚本时按系统 ANSI 代码页（中文系统是 GBK）解码，
+# 脚本里的中文会变成乱码，甚至会因为字节被吃掉而直接语法报错。
+# 这里的设置让编辑器保持 BOM，避免踩坑。
+
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+trim_trailing_whitespace = true
+
+[*.{py,toml,md,cfg,ini}]
+charset = utf-8
+
+[*.ps1]
+charset = utf-8-bom
+end_of_line = crlf
+
+[*.{bat,cmd}]
+charset = utf-8-bom
+end_of_line = crlf
