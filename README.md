@@ -282,7 +282,7 @@ python -m venv .venv
 
 ## License
 
-[MIT](LICENSE) © 2026 hanxi
+[MIT](LICENSE) © 2026 alspd
 
 简单说：你可以自由使用、修改、分发、甚至商用，只要保留版权声明。
 软件按「现状」提供，不附带任何担保。
